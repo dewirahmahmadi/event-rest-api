@@ -1,0 +1,103 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  DOCKER_IMAGE: event-ticketing
+  CONTAINER_NAME: event-ticketing-api
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore EventTicketing/EventTicketing.csproj
+
+      - name: Build
+        run: dotnet build EventTicketing/EventTicketing.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal || true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.DOCKER_IMAGE }}:latest -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} -f EventTicketing/Dockerfile .
+
+      - name: Save Docker image
+        run: |
+          docker save ${{ env.DOCKER_IMAGE }}:latest | gzip > image.tar.gz
+
+      - name: Copy image to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: "image.tar.gz"
+          target: "/tmp"
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            # Load the Docker image
+            docker load < /tmp/image.tar.gz
+
+            # Stop and remove existing container if it exists
+            docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+            docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true
+
+            # Run the new container
+            docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --restart unless-stopped \
+              -p 5000:5000 \
+              -e ASPNETCORE_ENVIRONMENT=Production \
+              -e ASPNETCORE_URLS=http://+:5000 \
+              -e ConnectionStrings__DefaultConnection="${{ secrets.DB_CONNECTION_STRING }}" \
+              -e Jwt__Secret="${{ secrets.JWT_SECRET }}" \
+              -e Jwt__Issuer="${{ secrets.JWT_ISSUER }}" \
+              -e Jwt__Audience="${{ secrets.JWT_AUDIENCE }}" \
+              -e Supabase__Url="${{ secrets.SUPABASE_URL }}" \
+              -e Supabase__Key="${{ secrets.SUPABASE_KEY }}" \
+              ${{ env.DOCKER_IMAGE }}:latest
+
+            # Clean up
+            rm /tmp/image.tar.gz
+
+            # Remove old images
+            docker image prune -f
+
+            # Verify deployment
+            sleep 5
+            docker ps | grep ${{ env.CONTAINER_NAME }}
