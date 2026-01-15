@@ -4,6 +4,6 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
-EventTicketing/appsettings*.json
+EventTicketing/appsettings.*.json
 EventTicketing/wwwroot/
 EventTicketing/.env
