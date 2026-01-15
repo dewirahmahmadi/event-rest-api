@@ -1,0 +1,9 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.idea/
+EventTicketing/appsettings*.json
+EventTicketing/wwwroot/
+EventTicketing/.env

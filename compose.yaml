@@ -1,0 +1,7 @@
+﻿services:
+  eventticketing:
+    image: eventticketing
+    build:
+      context: .
+      dockerfile: EventTicketing/Dockerfile
+

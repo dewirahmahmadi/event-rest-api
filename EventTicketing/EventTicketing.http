@@ -1,0 +1,202 @@
+@EventTicketing_HostAddress = http://localhost:5228
+
+# Health Check Endpoint
+GET {{EventTicketing_HostAddress}}/health
+Accept: application/json
+
+###
+
+# Swagger UI (Open in Browser)
+# {{EventTicketing_HostAddress}}/swagger
+
+###
+
+GET {{EventTicketing_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+# Event API endpoints (Controller-based)
+
+# Get all events
+GET {{EventTicketing_HostAddress}}/api/event
+Accept: application/json
+
+###
+
+# Get event by ID
+@eventId = 550e8400-e29b-41d4-a716-446655440000
+
+GET {{EventTicketing_HostAddress}}/api/event/{{eventId}}
+Accept: application/json
+
+###
+
+# Create new event
+POST {{EventTicketing_HostAddress}}/api/event
+Content-Type: application/json
+
+{
+  "title": "Sample Event",
+  "description": "This is a sample event for testing",
+  "startDate": "2025-06-01T19:00:00Z",
+  "endDate": "2025-06-01T22:00:00Z",
+  "location": "Conference Center",
+  "maxAttendees": 100
+}
+
+###
+
+# Update event
+PUT {{EventTicketing_HostAddress}}/api/event/{{eventId}}
+Content-Type: application/json
+
+{
+  "title": "Updated Event Title",
+  "description": "This is an updated event description",
+  "startDate": "2025-06-02T19:00:00Z",
+  "endDate": "2025-06-02T22:00:00Z",
+  "location": "Updated Location",
+  "maxAttendees": 150
+}
+
+###
+
+# Delete event
+DELETE {{EventTicketing_HostAddress}}/api/event/{{eventId}}
+
+###
+
+# Additional Event API endpoints
+
+@organizerId = 550e8400-e29b-41d4-a716-446655440001
+
+# Get events by organizer
+GET {{EventTicketing_HostAddress}}/api/event/organizer/{{organizerId}}
+Accept: application/json
+
+###
+
+# Get upcoming events
+GET {{EventTicketing_HostAddress}}/api/event/upcoming
+Accept: application/json
+
+###
+
+# Check if event is full
+GET {{EventTicketing_HostAddress}}/api/event/{{eventId}}/is-full
+Accept: application/json
+
+###
+
+# Get event registration count
+GET {{EventTicketing_HostAddress}}/api/event/{{eventId}}/registration-count
+Accept: application/json
+
+###
+
+# Registration API endpoints (Controller-based)
+
+@registrationId = 660e8400-e29b-41d4-a716-446655440000
+@userId = 770e8400-e29b-41d4-a716-446655440000
+
+# Get all registrations
+GET {{EventTicketing_HostAddress}}/api/registration
+Accept: application/json
+
+###
+
+# Get registration by ID
+GET {{EventTicketing_HostAddress}}/api/registration/{{registrationId}}
+Accept: application/json
+
+###
+
+# Get registrations by event ID
+GET {{EventTicketing_HostAddress}}/api/registration/event/{{eventId}}
+Accept: application/json
+
+###
+
+# Get registrations by user ID
+GET {{EventTicketing_HostAddress}}/api/registration/user/{{userId}}
+Accept: application/json
+
+###
+
+# Create new registration
+POST {{EventTicketing_HostAddress}}/api/registration
+Content-Type: application/json
+
+{
+  "eventId": "{{eventId}}",
+  "userName": "john.doe",
+  "userEmail": "john.doe@example.com",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+###
+
+# Update registration
+PUT {{EventTicketing_HostAddress}}/api/registration/{{registrationId}}
+Content-Type: application/json
+
+{
+  "userName": "jane.doe",
+  "userEmail": "jane.doe@example.com",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "status": 0
+}
+
+###
+
+# Delete registration
+DELETE {{EventTicketing_HostAddress}}/api/registration/{{registrationId}}
+
+###
+
+# Check in registration
+PATCH {{EventTicketing_HostAddress}}/api/registration/{{registrationId}}/checkin
+
+###
+
+# Cancel registration
+PATCH {{EventTicketing_HostAddress}}/api/registration/{{registrationId}}/cancel
+
+###
+
+# SignalR EventHub Connection Information
+# Connection URL: {{EventTicketing_HostAddress}}/eventhub
+# 
+# Client-side JavaScript example:
+# const connection = new signalR.HubConnectionBuilder()
+#     .withUrl("http://localhost:5228/eventhub")
+#     .build();
+#
+# // Start connection
+# connection.start().then(() => {
+#     console.log("Connected to EventHub");
+# });
+#
+# // Join event group
+# connection.invoke("JoinEventGroup", "550e8400-e29b-41d4-a716-446655440000");
+#
+# // Leave event group  
+# connection.invoke("LeaveEventGroup", "550e8400-e29b-41d4-a716-446655440000");
+#
+# // Join user group
+# connection.invoke("JoinUserGroup", "770e8400-e29b-41d4-a716-446655440000");
+#
+# // Listen for events
+# connection.on("UserJoined", (data) => console.log("User joined:", data));
+# connection.on("UserLeft", (data) => console.log("User left:", data));
+# connection.on("RegistrationCreated", (data) => console.log("New registration:", data));
+# connection.on("RegistrationCancelled", (data) => console.log("Registration cancelled:", data));
+# connection.on("AttendeeCheckedIn", (data) => console.log("Attendee checked in:", data));
+# connection.on("CapacityUpdate", (data) => console.log("Capacity update:", data));
+# connection.on("Connected", (data) => console.log("Connected:", data));
+# connection.on("UserDisconnected", (data) => console.log("User disconnected:", data));
+
+###
