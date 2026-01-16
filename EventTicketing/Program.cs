@@ -1,4 +1,5 @@
 using System.Text;
+using DotNetEnv;
 using EventTicketing.Application.Services;
 using EventTicketing.Hub;
 using EventTicketing.Infrastructure.Configuration;
@@ -102,6 +103,7 @@ builder.Services.AddAuthorization();
 
 // SignalR
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<EventConnectionTracker>();
 
 // Database
 builder.Services.AddDatabase(builder.Configuration);
@@ -109,7 +111,6 @@ builder.Services.AddDatabase(builder.Configuration);
 // Application Services
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<RegistrationService>();
-builder.Services.AddScoped<EventNotificationService>();
 builder.Services.AddScoped<AuthService>();
 // builder.Services.AddScoped<DataSeeder>();
 
