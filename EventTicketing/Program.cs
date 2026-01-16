@@ -144,10 +144,6 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/", () => Results.Redirect("/api-docs")).ExcludeFromDescription();
 }
 
-// Static files (UI)
-app.UseDefaultFiles();
-app.UseStaticFiles();
-
 // Security
 app.UseHttpsRedirection();
 
@@ -164,6 +160,10 @@ app.UseAuthorization();
 // Endpoints
 app.MapApiControllers();
 app.MapHub<EventHub>("/eventhub");
+
+// Static files (UI)
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 // ===========================================
 // Run Application
