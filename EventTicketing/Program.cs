@@ -162,8 +162,8 @@ app.MapApiControllers();
 app.MapHub<EventHub>("/eventhub");
 
 // Static files (UI)
-app.UseDefaultFiles();
-app.UseStaticFiles();
+// app.UseDefaultFiles();
+// app.UseStaticFiles();
 
 // ===========================================
 // Run Application
