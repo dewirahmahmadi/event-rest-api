@@ -96,30 +96,4 @@ public class RegistrationController : ApiControllerBase
             return BadRequest(ex.Message);
         }
     }
-    
-    [HttpPatch("{id:guid}/checkin")]
-    [ProducesResponseType(typeof(ApplicationDto.ApiResponse<RegistrationResponseDTO>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApplicationDto.ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CheckInRegistration(Guid id)
-    {
-        var checkedInRegistration = await _registrationService.CheckInRegistrationAsync(id);
-        
-        if (checkedInRegistration is null)
-            return NotFound($"Registration with ID {id} not found");
-
-        return Success(checkedInRegistration, "Registration checked in successfully");
-    }
-    
-    [HttpPatch("{id:guid}/checkout")]
-    [ProducesResponseType(typeof(ApplicationDto.ApiResponse<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApplicationDto.ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CheckOutRegistration(Guid id)
-    {
-        var existingRegistration = await _registrationService.GetRegistrationByIdAsync(id);
-        if (existingRegistration is null)
-            return NotFound($"Registration with ID {id} not found");
-
-        await _registrationService.CheckOutRegistrationAsync(id);
-        return Success<object>(null!, "Registration checked out successfully");
-    }
 }

@@ -109,41 +109,4 @@ public class RegistrationService
 
         return new RegistrationResponseDTO(createdRegistration);
     }
-
-    public async Task<RegistrationResponseDTO?> CheckInRegistrationAsync(Guid id)
-    {
-        var existingRegistration = await _dbContext.EventRegistrations
-            .Include(er => er.User)
-                .ThenInclude(u => u.Profile)
-            .Include(er => er.Event)
-            .FirstOrDefaultAsync(er => er.Id == id);
-
-        if (existingRegistration == null)
-            return null;
-
-        existingRegistration.IsAttending = true;
-        existingRegistration.CheckedInAt = DateTime.UtcNow;
-        existingRegistration.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return new RegistrationResponseDTO(existingRegistration);
-    }
-
-    public async Task<bool> CheckOutRegistrationAsync(Guid id)
-    {
-        var existingRegistration = await _dbContext.EventRegistrations
-            .FirstOrDefaultAsync(er => er.Id == id);
-
-        if (existingRegistration == null)
-            return false;
-
-        existingRegistration.IsAttending = false;
-        existingRegistration.CheckedOutAt = DateTime.UtcNow;
-        existingRegistration.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return true;
-    }
 }

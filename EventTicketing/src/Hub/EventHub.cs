@@ -1,112 +1,87 @@
-
 using Microsoft.AspNetCore.SignalR;
 
 namespace EventTicketing.Hub;
 
 public class EventHub : Microsoft.AspNetCore.SignalR.Hub
 {
-    public async Task JoinEventGroup(string eventId)
+    private readonly EventConnectionTracker _connectionTracker;
+    private readonly ILogger<EventHub> _logger;
+
+    public EventHub(EventConnectionTracker connectionTracker, ILogger<EventHub> logger)
     {
+        _connectionTracker = connectionTracker;
+        _logger = logger;
+    }
+
+    public async Task JoinEvent(string eventId, string userId)
+    {
+        _logger.LogInformation("User {UserId} joining event {EventId} with connection {ConnectionId}", 
+            userId, eventId, Context.ConnectionId);
+
         await Groups.AddToGroupAsync(Context.ConnectionId, $"event-{eventId}");
-        await Clients.Caller.SendAsync("JoinedEvent", eventId);
+        _connectionTracker.AddConnection(eventId, Context.ConnectionId);
         
+        var currentViewers = _connectionTracker.GetConnectionCount(eventId);
         await Clients.Group($"event-{eventId}").SendAsync("UserJoined", new
         {
-            ConnectionId = Context.ConnectionId,
             EventId = eventId,
+            UserId = userId,
+            ConnectionId = Context.ConnectionId,
+            CurrentViewers = currentViewers,
             Timestamp = DateTime.UtcNow
         });
+
+        _logger.LogInformation("UserJoined event sent to group event-{EventId}", eventId);
     }
-    
-    public async Task LeaveEventGroup(string eventId)
+
+    public async Task LeaveEvent(string eventId, string userId)
     {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"event-{eventId}");
-        await Clients.Caller.SendAsync("LeftEvent", eventId);
+        _logger.LogInformation("User {UserId} leaving event {EventId} with connection {ConnectionId}", 
+            userId, eventId, Context.ConnectionId);
+        
+        var currentViewersBefore = _connectionTracker.GetConnectionCount(eventId);
+        var currentViewersAfter = currentViewersBefore - 1;
         
         await Clients.Group($"event-{eventId}").SendAsync("UserLeft", new
         {
+            EventId = eventId,
+            UserId = userId,
             ConnectionId = Context.ConnectionId,
-            EventId = eventId,
+            CurrentViewers = currentViewersAfter,
             Timestamp = DateTime.UtcNow
         });
+        
+        _connectionTracker.RemoveConnection(eventId, Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"event-{eventId}");
+
+        _logger.LogInformation("User {UserId} removed from event {EventId}", userId, eventId);
     }
-    
-    public async Task JoinUserGroup(string userId)
+
+    public override async Task OnConnectedAsync()
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
-        await Clients.Caller.SendAsync("JoinedUserGroup", userId);
-    }
-    
-    public async Task LeaveUserGroup(string userId)
-    {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user-{userId}");
-        await Clients.Caller.SendAsync("LeftUserGroup", userId);
-    }
-    
-    public async Task NotifyRegistrationCreated(string eventId, object registrationData)
-    {
-        await Clients.Group($"event-{eventId}").SendAsync("RegistrationCreated", new
-        {
-            EventId = eventId,
-            Registration = registrationData,
-            Timestamp = DateTime.UtcNow
-        });
-    }
-    
-    public async Task NotifyRegistrationCancelled(string eventId, string registrationId)
-    {
-        await Clients.Group($"event-{eventId}").SendAsync("RegistrationCancelled", new
-        {
-            EventId = eventId,
-            RegistrationId = registrationId,
-            Timestamp = DateTime.UtcNow
-        });
-    }
-    
-    public async Task NotifyCheckedIn(string eventId, string registrationId, string userName)
-    {
-        await Clients.Group($"event-{eventId}").SendAsync("AttendeeCheckedIn", new
-        {
-            EventId = eventId,
-            RegistrationId = registrationId,
-            UserName = userName,
-            Timestamp = DateTime.UtcNow
-        });
-    }
-    
-    public async Task NotifyEventCapacityUpdate(string eventId, int currentAttendees, int maxAttendees)
-    {
-        await Clients.Group($"event-{eventId}").SendAsync("CapacityUpdate", new
-        {
-            EventId = eventId,
-            CurrentAttendees = currentAttendees,
-            MaxAttendees = maxAttendees,
-            AvailableSpots = maxAttendees - currentAttendees,
-            IsFull = currentAttendees >= maxAttendees,
-            Timestamp = DateTime.UtcNow
-        });
+        _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
+        await base.OnConnectedAsync();
     }
     
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await Clients.Others.SendAsync("UserDisconnected", new
+        _logger.LogInformation("Client disconnected: {ConnectionId}, Exception: {Exception}", 
+            Context.ConnectionId, exception?.Message);
+
+        var affectedEvents = _connectionTracker.RemoveConnectionFromAllEvents(Context.ConnectionId);
+        
+        foreach (var (eventId, currentViewers) in affectedEvents)
         {
-            ConnectionId = Context.ConnectionId,
-            Timestamp = DateTime.UtcNow
-        });
+            await Clients.Group($"event-{eventId}").SendAsync("UserLeft", new
+            {
+                EventId = eventId,
+                ConnectionId = Context.ConnectionId,
+                CurrentViewers = currentViewers,
+                Reason = "Disconnected",
+                Timestamp = DateTime.UtcNow
+            });
+        }
         
         await base.OnDisconnectedAsync(exception);
-    }
-    
-    public override async Task OnConnectedAsync()
-    {
-        await Clients.Caller.SendAsync("Connected", new
-        {
-            ConnectionId = Context.ConnectionId,
-            Timestamp = DateTime.UtcNow,
-            Message = "Successfully connected to EventHub"
-        });
-        
-        await base.OnConnectedAsync();
     }
 }
